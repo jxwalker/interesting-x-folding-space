@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Interesting X · Folding Space: a neural network untangling data</title>
+    <meta name="description" content="Watch a real neural network learn: two tangled strands of glass beads untwist as each layer bends and folds space, until one flat sheet splits them. Then see why linked rings need an extra dimension." />
+    <meta name="theme-color" content="#070b12" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage"></div>
+
+      <header class="intro" id="intro">
+        <h1>Folding Space</h1>
+        <p class="sub">How a neural network untangles data by folding space</p>
+        <p class="hint">Drag through the layers to watch the strands untwist. Then try Linked rings.</p>
+        <button class="help" id="btn-help" type="button" aria-controls="explain" aria-expanded="false"><i aria-hidden="true">?</i>What am I looking at?</button>
+      </header>
+
+      <div class="badge" id="badge" hidden>simple mode (no WebGL)</div>
+
+      <section class="panel dock" id="dock" aria-label="Controls">
+        <p class="caption" id="caption" aria-live="polite"><i class="dot" aria-hidden="true"></i><span id="caption-text">A random network: space is scrambled, but the strands are still tangled.</span></p>
+
+        <div class="meters">
+          <div class="meter">
+            <div class="meter-head"><span class="cap">Correct</span><span class="mono big" id="m-acc">50%</span></div>
+            <div class="meter-track"><div class="meter-fill acc" id="f-acc"></div></div>
+            <p class="desc"><span class="long">Share of beads on the right side of the glass sheet.</span><span class="short">Beads on the right side</span></p>
+          </div>
+          <div class="meter">
+            <div class="meter-head"><span class="cap">Loss</span><span class="mono big" id="m-loss">0.69</span></div>
+            <canvas class="spark" id="spark-loss" aria-hidden="true"></canvas>
+            <p class="desc"><span class="long">How wrong the network still is. It falls as it learns.</span><span class="short">How wrong it still is</span></p>
+          </div>
+          <div class="meter">
+            <div class="meter-head"><span class="cap">Separable here</span><span class="mono big" id="m-probe">50%</span></div>
+            <div class="meter-track"><div class="meter-fill probe" id="f-probe"></div></div>
+            <p class="desc"><span class="long">How well one flat sheet could split the beads at this layer.</span><span class="short">One flat sheet could split</span></p>
+          </div>
+          <div class="meter">
+            <div class="meter-head"><span class="cap">Directions used</span><span class="mono big" id="m-dims">3.0</span></div>
+            <div class="dims" id="dims-pips" aria-hidden="true"></div>
+            <p class="desc"><span class="long">How many independent directions the data spreads along here.</span><span class="short">Directions the data uses</span></p>
+          </div>
+        </div>
+
+        <div class="ctl layer-ctl">
+          <div class="ctl-row"><label class="cap" for="layer">Walk through the layers</label><span class="mono" id="layer-val">Output</span></div>
+          <input id="layer" type="range" min="0" max="4" step="0.01" value="4" aria-label="Walk through the layers, from the input to the output" />
+          <div class="ticks" id="ticks" aria-hidden="true"></div>
+          <p class="desc" id="view-note">3 neurons: first a stretch (W·h + b), then a bend (tanh).</p>
+        </div>
+
+        <div class="ctl">
+          <span class="cap">Shape</span>
+          <div class="seg" role="group" aria-label="Shape of the data">
+            <button id="shape-twisted" class="segb on" type="button" aria-pressed="true">Twisted pair</button>
+            <button id="shape-rings" class="segb" type="button" aria-pressed="false">Linked rings</button>
+            <button id="shape-shell" class="segb" type="button" aria-pressed="false">Ball in a shell</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="btn-learn" class="btn primary" type="button" aria-pressed="true"><span id="learn-label">Pause learning</span></button>
+          <button id="btn-reset" class="btn" type="button" title="A new random network, trained from scratch">Start over</button>
+          <button id="btn-advanced" class="btn" type="button" aria-expanded="false" aria-controls="adv">Advanced</button>
+        </div>
+        <p class="credit credit-in-dock">
+          Inspired by <a href="https://x.com/0xDeliriumm/status/2107188738296041789" target="_blank" rel="noopener">@0xDeliriumm</a>'s thread on the geometry inside neural networks; topology demo after Chris Olah,
+          <a href="https://colah.github.io/posts/2014-03-NN-Manifolds-Topology/" target="_blank" rel="noopener">‘Neural Networks, Manifolds, and Topology’</a> (2014)
+        </p>
+      </section>
+
+      <aside class="panel adv" id="adv" hidden aria-label="Advanced">
+        <div class="adv-head">
+          <span class="cap">Advanced</span>
+          <button class="x" id="btn-adv-close" type="button" aria-label="Close advanced">×</button>
+        </div>
+        <div class="presets">
+          <button class="btn chip" id="preset-helix" type="button">Untwist the helix</button>
+          <button class="btn chip" id="preset-stuck" type="button">Stuck: rings with 3 neurons</button>
+          <button class="btn chip" id="preset-freed" type="button">Freed: rings with 6 neurons</button>
+        </div>
+        <label class="ctl">
+          <span class="ctl-row"><span class="cap">Neurons per layer <span class="tag">width</span></span><span class="mono" id="width-val">3</span></span>
+          <span class="desc">Room to move. 3 can only bend 3D space; 4+ adds an extra direction to lift things through.</span>
+          <input id="width" type="range" min="2" max="8" step="1" value="3" aria-label="Neurons per layer (room to move)" />
+        </label>
+        <label class="ctl">
+          <span class="ctl-row"><span class="cap">Layers <span class="tag">folds</span></span><span class="mono" id="depth-val">4</span></span>
+          <span class="desc">How many bend-and-stretch steps the network gets. The last layer always has 3 neurons.</span>
+          <input id="depth" type="range" min="2" max="6" step="1" value="4" aria-label="Layers (folds)" />
+        </label>
+        <label class="ctl">
+          <span class="ctl-row"><span class="cap">Bend type <span class="tag">activation</span></span></span>
+          <span class="desc">tanh bends smoothly; ReLU folds space flat along creases.</span>
+          <select id="act" aria-label="Bend type (activation function)">
+            <option value="tanh" selected>tanh (smooth bend)</option>
+            <option value="relu">ReLU (crease)</option>
+            <option value="leaky">leaky ReLU (soft crease)</option>
+          </select>
+        </label>
+        <label class="ctl">
+          <span class="ctl-row"><span class="cap">Learning speed <span class="tag">lr</span></span><span class="mono" id="lr-val">0.020</span></span>
+          <span class="desc">How big each Adam step is. Too big and the folds jitter.</span>
+          <input id="lr" type="range" min="-3" max="-0.7" step="0.01" value="-1.699" aria-label="Learning speed (learning rate, log scale)" />
+        </label>
+        <label class="ctl">
+          <span class="ctl-row"><span class="cap">Noise <span class="tag">σ</span></span><span class="mono" id="noise-val">0.020</span></span>
+          <span class="desc">How much the beads wobble off their strands.</span>
+          <input id="noise" type="range" min="0" max="0.12" step="0.005" value="0.02" aria-label="Noise in the data" />
+        </label>
+        <label class="ctl check">
+          <input id="grid" type="checkbox" checked />
+          <span><span class="cap">Show the space grid</span><span class="desc">The silver lattice: a cube of grid lines pushed through the same layers.</span></span>
+        </label>
+        <div class="plot-head"><span class="cap">Directions used, this layer</span><span class="mono" id="eig-note"></span></div>
+        <canvas id="plot-eig" class="plot" aria-label="Eigenvalues of this layer's activation covariance"></canvas>
+        <p class="desc">Covariance eigenvalues of the layer's activations (largest = 1). Few tall bars = the data really lives in few directions.</p>
+        <div class="plot-head"><span class="cap">Separable here, every layer</span></div>
+        <canvas id="plot-probe" class="plot" aria-label="Linear probe accuracy at each layer"></canvas>
+        <p class="desc">A fresh logistic regression fitted on each layer. It climbs layer by layer as the network untangles.</p>
+        <div class="plot-head"><span class="cap">Loss while learning</span><span class="mono" id="steps-val">0 steps</span></div>
+        <canvas id="plot-loss" class="plot small" aria-label="Loss over recent training steps"></canvas>
+      </aside>
+
+      <section class="panel explain-card" id="explain" role="dialog" aria-labelledby="explain-title" hidden>
+        <div class="explain-head">
+          <h2 id="explain-title">What you're looking at</h2>
+          <button class="x" id="btn-explain-x" type="button" aria-label="Close explanation">×</button>
+        </div>
+        <p>Two tangled strands of beads, amber and teal, and a small neural network learning to tell them apart. The clear cube shows where every bead sits after each layer of the network, and the silver grid shows what that layer did to space itself.</p>
+        <p><b>Why it matters:</b> neural networks don't learn rules. They learn to bend, stretch and fold space until things that belong together end up on the same side of one flat sheet. It's the same geometric idea behind how big language models organise meaning, small enough here to watch.</p>
+        <p class="try"><span>Try it:</span> drag 'Walk through the layers' to watch the strands untwist one step at a time. Switch to Linked rings and see the network get stuck, then open Advanced and give it more neurons per layer: it lifts one ring out through an extra dimension. Tap any bead to follow its journey.</p>
+        <button class="btn primary" id="btn-explain-ok" type="button">Got it</button>
+      </section>
+
+      <footer class="credit credit-foot">
+        Inspired by <a href="https://x.com/0xDeliriumm/status/2107188738296041789" target="_blank" rel="noopener">@0xDeliriumm</a>'s thread on the geometry inside neural networks; topology demo after Chris Olah,
+        <a href="https://colah.github.io/posts/2014-03-NN-Manifolds-Topology/" target="_blank" rel="noopener">‘Neural Networks, Manifolds, and Topology’</a> (2014)
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

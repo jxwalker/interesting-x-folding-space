@@ -1,0 +1,22 @@
+{
+  "name": "interesting-x-folding-space",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 43148",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 43148",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.5"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "description": "Watch a real neural network learn: two tangled strands of glass beads untwist as each layer bends and folds space, until one flat sheet splits them. Then see why linked rings need an extra dimension.",
+  "license": "MIT",
+  "private": false
+}
